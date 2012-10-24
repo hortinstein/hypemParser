@@ -1,0 +1,23 @@
+{
+  "name": "hypemParser",
+  "subdomain": "metaHypem",
+  "scripts": {
+    "start": "parser.js"
+  },
+  "version": "0.0.1",
+  "engines": {
+    "node": "0.8.x"
+  },
+  "dependencies": {
+    "redis": "*",
+    "measured": "*",
+    "jsdom": "*",
+    "request": "*",
+    "util": "*",
+    "nano" : "*",
+    "moment" : "*"
+  },
+  "bundledDependencies": [
+    "redis"
+  ]
+}

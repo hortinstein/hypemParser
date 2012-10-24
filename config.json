@@ -3,5 +3,5 @@
   "nodejitsu_redis_port": "9412",
   "nodejitsu_redis_pass": "8486c6da8611ec7440e816ea46916615" ,
   
-  "nodejitsu_couch_url": "http://predditor:apredditorsitsonalinuxcouch@nodejitsudb792897988073.iriscouch.com:5984",
+  "nodejitsu_couch_url": "http://predditor:apredditorsitsonalinuxcouch@nodejitsudb792897988073.iriscouch.com:5984"
 }

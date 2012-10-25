@@ -1,9 +1,20 @@
+//Modules
+hypemParser = require('./parser');
+
+//Constants
+MILISECONDS = 1
+SECONDS     = 1000 * MILISECONDS
+MINUTES     = 60 * SECONDS
+HOUR        = 60 * MINUTES
+
+//loads database configs
 try { var config = require('./config.json');} //loads the database configs
 catch (err) {console.log("no config");};
 
-hypemParser = require('./parser');
 
-var crawler = new hypemParser();//,nano);
+//initializes crawler
+var crawler = new hypemParser(config)
+
 
 crawler.on('next', function (message) { //when the parser is ready for the next url to parse
     console.log(message);

@@ -3,13 +3,19 @@ var events = require('events');
 var redis = require('redis');
 var request = require('request'); //module used to request the html from hypem
 var jsdom = require("jsdom"); //DOM parser
-
+var cheerio = require('cheerio');
 var stats = require('measured').createCollection();
+var redisInit = require('./setupRedis');
+MILISECONDS = 1
+SECONDS     = 1000 * MILISECONDS
+MINUTES     = 60 * SECONDS
+HOUR        = 60 * MINUTES
 
-//small reoccuring service that dumps out requests per second
-setInterval(function() {
-    console.log(stats.toJSON().requestsPerSecond.mean + " hypem requests per second");
-}, 5000); //outputs the metrics
+//loads database configs
+try { var config = require('./config.json');} //loads the database configs
+catch (err) {console.log("no config");};
+
+
 
 function hypemParser(){
     this.emitForNext = function  (message) {
@@ -20,10 +26,14 @@ function hypemParser(){
 
     this.getHypeURL = function (url, callback) { 
         self = this; 
-        stats.meter('requestsPerSecond').mark();
-        request({url:url, html:true}, function (error, response, body) {  
+        data  = {
+            "ax": 1,
+            "ts": Date().getTime
+        }
+        request({url:url, method:'GET',qs:data}, function (error, response, body) {  
             if (!error){
-                callback(body); //call the callback function
+                callback(body,response.headers['set-cookie']); //call the callback function
+                self.emitForNext();
             } else{
                 console.log(error);
                 self.emitForNext("error pulling json:" + error);
@@ -35,24 +45,48 @@ function hypemParser(){
 //Lets reddit parser user the EventEmitter methods
 hypemParser.prototype = new process.EventEmitter();
 
-hypemParser.prototype.getSongsFromHtml = function(html) {
-    //console.log(html);
-    jsdom.env(
-        html,
-        ["http://code.jquery.com/jquery.js"],
-        function(errors, window) {
-            var $ = window.jQuery;
-            console.log(html.indexOf('id="displayList-data"'));
-            console.log($('displayList-data').text());
-           
-        //console.log("json:", window.$("displayList-data").text());
+
+
+hypemParser.prototype.getTracksJSONFromHtml = function(body,cookie) {    
+    $ = cheerio.load(body);
+    page_data = JSON.parse( $('#displayList-data').html() );
+
+    tracks = page_data.tracks;
+    for (var track in tracks){
+        songData = tracks[track];
+        var trackDataURL = "http://hypem.com/serve/source/#{id}/#{key}";
+        var id = songData.id;
+        var key = songData.key;
+        var headers = {
+            cookie: cookie
         }
-    );
-    
-};
+        request({url:trackDataURL, method:'GET',json:true,headers:headers}, function (error, response, data) {  
+            if (!error){
+                songData.url = data.url;
+                console.log(data.url);
+                //callback(null,songData); //call the callback function
+            } else{
+                
+            }
+        });
+    }
+
+}
+
+
+
+
+
+    //                 request options , (error, response, data) ->
+    //                     unless error? and response.statusCode is 200
+    //                         track.url = data.url
+    //                         #At this point we should add the track to the DB
+    //                         console.log track   
+
+
 //sits on the new json of Gone wild and pulls down the posts
 hypemParser.prototype.popular = function() {
-    this.getHypeURL('http://www.hypem.com/popular',this.getSongsFromHtml);
+    this.getHypeURL("http://www.hypem.com/popular",this.getTracksJSONFromHtml);
 };
 
 

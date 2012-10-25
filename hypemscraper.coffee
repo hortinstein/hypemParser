@@ -57,7 +57,7 @@ scrape = (url = "http://www.hypem.com/popular" ) ->
 					request options , (error, response, data) ->
 						unless error? and response.statusCode is 200
 							track.url = data.url
-
+							#At this point we should add the track to the DB
 							console.log track	
 
 

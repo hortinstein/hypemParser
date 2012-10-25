@@ -1,28 +1,41 @@
 //Modules
 hypemParser = require('./parser');
 
-//Constants
-MILISECONDS = 1
-SECONDS     = 1000 * MILISECONDS
-MINUTES     = 60 * SECONDS
-HOUR        = 60 * MINUTES
+hypemParser();
 
-//loads database configs
-try { var config = require('./config.json');} //loads the database configs
-catch (err) {console.log("no config");};
-
-
-//initializes crawler
-var crawler = new hypemParser(config)
-
-
-crawler.on('next', function (message) { //when the parser is ready for the next url to parse
-    console.log(message);
-    setTimeout(runParser,5000); //waits five seconds and calls the parser again
+///Module Includes
+var redis = require('redis')
+  , setupRedis = require('./setupRedis')
+  , express = require('express')
+ 
+var app = express();	
+var server = app.listen(3000);
+app.get("/", function(req, res) {
+  res.redirect("/index.html");
+});
+app.configure(function() {
+    app.use(express.static(__dirname + '/public'));
+    app.use(app.router);
 });
 
-runParser = function  () {
-    crawler.popular();
-};
 
-runParser(); //starts the parser loop
+var io = require('socket.io').listen(server);
+//Turns off the socket.io debug messages
+io.set('log level', 1)
+
+userCount = 0;
+
+
+try { var config = require('./config.json');}
+catch (err) {console.log("no config");};
+
+var redisClient = setupRedis(config);
+io.sockets.on('connection', function(client) {
+    ++userCount;
+    var sub = setupRedis(config);
+    
+    sub.subscribe("foundSong");
+    sub.on("message", function(channel, message) {
+        client.send(message);
+    });
+});

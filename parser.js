@@ -6,6 +6,9 @@ var jsdom = require("jsdom"); //DOM parser
 var cheerio = require('cheerio');
 var stats = require('measured').createCollection();
 var redisInit = require('./setupRedis');
+
+intervalID = null;
+
 MILISECONDS = 1
 SECONDS     = 1000 * MILISECONDS
 MINUTES     = 60 * SECONDS
@@ -15,80 +18,85 @@ HOUR        = 60 * MINUTES
 try { var config = require('./config.json');} //loads the database configs
 catch (err) {console.log("no config");};
 
+redisClient = redisInit(config);
 
-
-function hypemParser(){
-    this.emitForNext = function  (message) {
-        this.emit("next", message); //this allows the parser to signal when it is complete parsing the page
-    };
+function start() {
+    scrape();
+    if (!intervalID){
+        intervalID = setInterval(scrape, 30 * MINUTES);    
+    }
     
-    //getHypeURL
-
-    this.getHypeURL = function (url, callback) { 
-        self = this; 
-        data  = {
-            "ax": 1,
-            "ts": Date().getTime
-        }
-        request({url:url, method:'GET',qs:data}, function (error, response, body) {  
-            if (!error){
-                callback(body,response.headers['set-cookie']); //call the callback function
-                self.emitForNext();
-            } else{
-                console.log(error);
-                self.emitForNext("error pulling json:" + error);
-            }
-        });
-    };
+};
+function stop() {
+    if (intervalID){
+        clearInterval(intervalId);
+        intervalID = null;
+    }
+};
+function scrape(){
+    getHypeURL("http://www.hypem.com/popular");
 }
 
-//Lets reddit parser user the EventEmitter methods
-hypemParser.prototype = new process.EventEmitter();
+
+function getHypeURL(url) {
+
+    self = this; 
+    data  = {
+        "ax": 1,
+        "ts": Date().getTime
+    }
+    request({url:url, method:'GET',qs:data}, function (error, response, body) {  
+        if (!error){
+            getTracksJSONFromHtml(body);
+        } else{
+            console.log(error);
+        }
+    });
+};
 
 
-
-hypemParser.prototype.getTracksJSONFromHtml = function(body,cookie) {    
+function getTracksJSONFromHtml (body,cookie) {    
     $ = cheerio.load(body);
     page_data = JSON.parse( $('#displayList-data').html() );
 
     tracks = page_data.tracks;
     for (var track in tracks){
         songData = tracks[track];
-        var trackDataURL = "http://hypem.com/serve/source/#{id}/#{key}";
-        var id = songData.id;
-        var key = songData.key;
-        var headers = {
-            cookie: cookie
-        }
-        request({url:trackDataURL, method:'GET',json:true,headers:headers}, function (error, response, data) {  
-            if (!error){
-                songData.url = data.url;
-                console.log(data.url);
-                //callback(null,songData); //call the callback function
-            } else{
-                
-            }
-        });
+        getSongURL(songData,cookie)
     }
 
 }
 
+function getSongURL(songData,cookie){
+    var id = songData.id;
+    var key = songData.key;""
+    var trackDataURL = "http://hypem.com/serve/source/"+id+"/"+key;
+    var headers = {
+        cookie: cookie
+    }
+    request({url:trackDataURL, method:'GET',json:true,headers:headers}, function (error, response, data) {  
+        if (!error){
+            songData.url = data.url;
+            console.log(songData);
+            redisClient.HMSET("hypemPopular::"+songData.id, 
+                            {
+                                "id": toString(songData.id),
+                                "postid": toString(songData.postid),
+                                "postur": toString(songData.posturl),
+                                "key": toString(songData.key),
+                                "artist": toString(songData.artist),
+                                "title": toString(songData.title),
+                                "song": toString(songData.song),
+                                "url": toString(songData.url),                               
+                            });
+            redisClient.publish("foundSong", songData.artist + songData.song)
+        } else{
+            songData.url = data.null;
+        }
+    });
+}
 
 
+module.exports  = start;
 
 
-    //                 request options , (error, response, data) ->
-    //                     unless error? and response.statusCode is 200
-    //                         track.url = data.url
-    //                         #At this point we should add the track to the DB
-    //                         console.log track   
-
-
-//sits on the new json of Gone wild and pulls down the posts
-hypemParser.prototype.popular = function() {
-    this.getHypeURL("http://www.hypem.com/popular",this.getTracksJSONFromHtml);
-};
-
-
-
-module.exports  = hypemParser;

@@ -16,7 +16,9 @@
     "util": "*",
     "cheerio":"*",
     "nano" : "*",
-    "moment" : "*"
+    "moment" : "*",
+    "socket.io": "*",
+    "express": "*"
   },
   "bundledDependencies": [
     "redis"

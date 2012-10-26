@@ -1,0 +1,24 @@
+{
+  "name": "hypemparser",
+  "version": "0.0.1",
+  "description": "A module which scrapes HypeMachine and adds the scraped JSON into redis",
+  "main": "hypemscraper.coffee",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hortinstein/hypemParser"
+  },
+  "keywords": [
+    "HypeMachine",
+    "hypem"
+  ],
+  "author": "Farid Zakaria & Alex Hortin",
+  "license": "BSD",
+  "dependencies": {
+    "cheerio": "~0.10.1",
+    "request": "~2.11.4",
+    "redis": "~0.8.1"
+  }
+}

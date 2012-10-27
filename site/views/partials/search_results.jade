@@ -1,0 +1,11 @@
+table.table.table-striped
+  thead
+    tr 
+      th #
+      th title
+      th artist
+  tbody
+    tr(ng-repeat="song in songs")
+      td 0
+      td {{song.title}}
+      td {{song.artist}}

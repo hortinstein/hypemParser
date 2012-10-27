@@ -1,0 +1,24 @@
+extends layout
+
+
+block append head-scripts
+  script(src='/javascripts/songctrl.js')
+  script(src='/javascripts/searchctrl.js')
+  script(src='/javascripts/app.js')
+
+block content
+  .row
+    .span8
+      h2= title
+
+      div(ng-controller="SearchCtrl")
+        form#song-search.form-search(ng:submit="search(query)")
+          .input-append
+            input(name="query", type="text", ng-model="query", class="span4 search-query", placeholder="Search")
+            button.btn(type="submit") Search
+
+
+      a(href="search?qs=test") Lookup
+
+      div(ng-view)
+        p TEST TEST TEST 

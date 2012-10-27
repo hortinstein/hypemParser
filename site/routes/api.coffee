@@ -13,9 +13,13 @@ search = (req, res) ->
 		id: '1235'
 		title: 'My Test Song'
 		artist: 'Farid Zakaria'
+	test_song2 =
+		id: '1337'
+		title: 'not My Test Song'
+		artist: 'Alex'
 
 		
-	res.json([test_song])
+	res.json([test_song,test_song2])
 
 
 exports.search = search

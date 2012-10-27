@@ -4,8 +4,10 @@ table.table.table-striped
       th #
       th title
       th artist
+      th download
   tbody
     tr(ng-repeat="song in songs")
       td 0
       td {{song.title}}
       td {{song.artist}}
+      td {{song.download}}

@@ -1,1 +1,0 @@
-HypemScraper in coffeescript!

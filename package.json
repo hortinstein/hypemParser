@@ -1,5 +1,6 @@
 {
   "name": "hypemParser",
+  "main": "parser.js",
   "subdomain": "metaHypem",
   "scripts": {
     "start": "parser.js"

@@ -2,7 +2,6 @@ var http = require('http');
 var events = require('events');
 var redis = require('redis');
 var request = require('request'); //module used to request the html from hypem
-var jsdom = require("jsdom"); //DOM parser
 var cheerio = require('cheerio');
 var stats = require('measured').createCollection();
 var redisInit = require('./setupRedis');
@@ -14,32 +13,33 @@ SECONDS     = 1000 * MILISECONDS
 MINUTES     = 60 * SECONDS
 HOUR        = 60 * MINUTES
 
+var hypemParser = [];    
+module.exports = hypemParser;
 //loads database configs
 try { var config = require('./config.json');} //loads the database configs
 catch (err) {console.log("no config");};
 
 redisClient = redisInit(config);
 
-function start() {
+hypemParser.start = function() {
     scrape();
     if (!intervalID){
         intervalID = setInterval(scrape, 30 * MINUTES);    
     }
     
 };
-function stop() {
+hypemParser.stop = function() {
     if (intervalID){
         clearInterval(intervalId);
         intervalID = null;
     }
 };
-function scrape(){
-    getHypeURL("http://www.hypem.com/popular");
+hypemParser.scrape = function(){
+    hypemParser.getHypeURL("http://www.hypem.com/popular");
 }
 
 
-function getHypeURL(url) {
-
+hypemParser.getHypeURL = function(url) {
     self = this; 
     data  = {
         "ax": 1,
@@ -47,27 +47,30 @@ function getHypeURL(url) {
     }
     request({url:url, method:'GET',qs:data}, function (error, response, body) {  
         if (!error){
-            getTracksJSONFromHtml(body);
+            hypemParser.getTracksJSONFromHtml(body);
         } else{
             console.log(error);
         }
     });
 };
 
-
-function getTracksJSONFromHtml (body,cookie) {    
+hypemParser.getTracksJSONFromHtml = function (body,cookie) {    
     $ = cheerio.load(body);
     page_data = JSON.parse( $('#displayList-data').html() );
 
     tracks = page_data.tracks;
     for (var track in tracks){
         songData = tracks[track];
-        getSongURL(songData,cookie)
+        hypemParser.getSongURL(songData,cookie)
     }
-
 }
 
-function getSongURL(songData,cookie){
+hypemParser.hypeSearch = function(query){
+    query.replace(' ','%20');
+    hypemParser.getHypeURL("http://www.hypem.com/search/"+query+"/");
+}
+
+hypemParser.getSongURL = function(songData,cookie){
     var id = songData.id;
     var key = songData.key;""
     var trackDataURL = "http://hypem.com/serve/source/"+id+"/"+key;
@@ -97,6 +100,5 @@ function getSongURL(songData,cookie){
 }
 
 
-module.exports  = start;
 
 

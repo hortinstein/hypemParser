@@ -1,8 +1,8 @@
 //Modules
 hypemParser = require('./parser');
 
-hypemParser();
-
+//hypemParser();
+hypemParser.hypeSearch("lil wayne carter");
 ///Module Includes
 var redis = require('redis')
   , setupRedis = require('./setupRedis')

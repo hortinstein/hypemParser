@@ -80,6 +80,7 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
     url: url
     method: 'GET'
     qs: data
+    jar: false
 
   request options , (error, response, body) ->
     unless error? and response.statusCode is 200

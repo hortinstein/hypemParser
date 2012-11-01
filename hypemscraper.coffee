@@ -1,16 +1,32 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
+require("coffeescript")
 client = redis.createClient()
 
 client.on "error", (error) ->
   console.log("Redis Scraper Error: #{error}" )
 
+POPULAR = "http://www.hypem.com/popular"
+LATEST = "http://hypem.com/latest/"
 
 MILISECONDS = 1
 SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
 HOUR = 60 * MINUTES
+
+start = () ->
+  unless intervalId? 
+    scrape POPULAR, (tracks) ->
+      console.log("popular scrape complete")
+    scrape LATEST, (tracks) ->
+      console.log("latest scrape complete") 
+    intervalId = setInterval scrape, 2 * MINUTES 
+
+stop = () ->
+  if intervalId?
+    clearInterval(intervalId)
+    intervalId = null
 
 helper_fetch_download_url = (track, callback, error)->
   id = track.id
@@ -70,8 +86,7 @@ search = (query, callback) ->
   search_url = "http://hypem.com/search/#{query}"
   scrape(search_url, callback)
 
-scrape = (url = "http://www.hypem.com/popular", callback ) ->
-  
+scrape = (url = POPULAR, callback ) ->
   data = 
     'ax' : 1
     'ts' : new Date().getTime
@@ -105,13 +120,48 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           "title", track.title,
           "cookie", track.cookie
         )
-
+        #caching code to store tracks 
+        if url == POPULAR
+          client.sadd("popular",track.id)
+        if url == LATEST
+          client.sadd("latest",track.id)
+      client.expire("popular",120) #expires entries every two min
+      client.expire("popular",120) #expires entries every two min
       callback(valid_tracks)
     else
       console.error "Error trying to perform the request to hypem.com"
       callback([])
 
+popular = (callback) ->
+  track_list = []
+  createClient.smembers "popular" (err,track_ids) ->
+    if err
+      return []
+    else 
+      for id in track_ids
+        client.hgetall id, (err,track_data)->  
+          if err
+            continue
+          else
+            track_list.push(track_data)
 
+
+latest = (callback) ->
+  track_list = []
+  createClient.smembers "latest" (err,track_ids) ->
+    if err
+      return []
+    else 
+      for id in track_ids
+        client.hgetall id, (err,track_data)->  
+          if err
+            continue
+          else
+            track_list.push(track_data)
+
+module.exports.latest  = latest
+module.exports.popular = popular
+module.exports.start   = start
 module.exports.scrape  = scrape
 module.exports.search  = search
 module.exports.get_download_url = get_download_url

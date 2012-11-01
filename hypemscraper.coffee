@@ -1,7 +1,7 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
-require("coffeescript")
+require('coffee-script')
 client = redis.createClient()
 
 client.on "error", (error) ->
@@ -144,6 +144,7 @@ popular = (callback) ->
             continue
           else
             track_list.push(track_data)
+      callback(track_list)
 
 
 latest = (callback) ->
@@ -158,6 +159,7 @@ latest = (callback) ->
             continue
           else
             track_list.push(track_data)
+      callback(track_list)
 
 module.exports.latest  = latest
 module.exports.popular = popular

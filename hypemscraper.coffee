@@ -93,6 +93,7 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
       for track in tracks
         continue if track.type is false
         track["title"] = track.song #pretty renaming
+        track["cookie"] = cookie
         valid_tracks.push(track)
 
 
@@ -102,7 +103,7 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           "key", track.key,
           "artist", track.artist,
           "title", track.title,
-          "cookie", cookie
+          "cookie", track.cookie
         )
 
       callback(valid_tracks)

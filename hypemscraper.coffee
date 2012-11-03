@@ -1,11 +1,11 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
-require('coffee-script')
+require('coffee-script');
 client = redis.createClient()
 
-client.on "error", (error) ->
-  console.log("Redis Scraper Error: #{error}" )
+#client.on "error", (error) ->
+#  console.log("Redis Scraper Error: #{error}" )
 
 POPULAR = "http://www.hypem.com/popular"
 LATEST = "http://hypem.com/latest/"
@@ -132,37 +132,37 @@ scrape = (url = POPULAR, callback ) ->
       console.error "Error trying to perform the request to hypem.com"
       callback([])
 
-popular = (callback) ->
-  track_list = []
-  createClient.smembers "popular" (err,track_ids) ->
-    if err
-      return []
-    else 
-      for id in track_ids
-        client.hgetall id, (err,track_data)->  
-          if err
-            continue
-          else
-            track_list.push(track_data)
-      callback(track_list)
+# popular = (callback) ->
+#   track_list = []
+#   createClient.smembers "popular" (err,track_ids) ->
+#     if err
+#       return []
+#     else 
+#       for id in track_ids
+#         client.hgetall id, (err,track_data)->  
+#           if err
+#             continue
+#           else
+#             track_list.push(track_data)
+#       callback(track_list)
 
 
-latest = (callback) ->
-  track_list = []
-  createClient.smembers "latest" (err,track_ids) ->
-    if err
-      return []
-    else 
-      for id in track_ids
-        client.hgetall id, (err,track_data)->  
-          if err
-            continue
-          else
-            track_list.push(track_data)
-      callback(track_list)
+# latest = (callback) ->
+#   track_list = []
+#   createClient.smembers "latest" (err,track_ids) ->
+#     if err
+#       return []
+#     else 
+#       for id in track_ids
+#         client.hgetall id, (err,track_data)->  
+#           if err
+#             continue
+#           else
+#             track_list.push(track_data)
+#       callback(track_list)
 
-module.exports.latest  = latest
-module.exports.popular = popular
+# module.exports.latest  = latest
+# module.exports.popular = popular
 module.exports.start   = start
 module.exports.scrape  = scrape
 module.exports.search  = search

@@ -8,8 +8,8 @@ set_DB_clients = (config) ->
   if config == undefined
     redis_client = redis.createClient()
   else
-    redis_client = require("./setupRedis.js").redisInit(config)
-  #couch_client = require("./configCouch.js") 
+    redis_client = require("./setupRedis.js")(config)
+
 
 MILISECONDS = 1
 SECONDS = 1000 * MILISECONDS

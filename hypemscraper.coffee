@@ -1,11 +1,15 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
-client = redis.createClient()
 
-client.on "error", (error) ->
-  console.log("Redis Scraper Error: #{error}" )
+redis_client = ""
 
+set_DB_clients = (config) ->
+  if config == undefined
+    redis_client = redis.createClient()
+  else
+    redis_client = require("./setupRedis.js").redisInit(config)
+  #couch_client = require("./configCouch.js") 
 
 MILISECONDS = 1
 SECONDS = 1000 * MILISECONDS
@@ -33,7 +37,7 @@ helper_fetch_download_url = (track, callback, error)->
 
   request options , (error, response, data) ->
     unless error? and response.statusCode is 200
-      client.hmset(track.id, "download_url", data.url)
+      redis_client.hmset(track.id, "download_url", data.url)
       #At this point we should add the track to the DB
       callback(data.url)
     else
@@ -42,7 +46,7 @@ helper_fetch_download_url = (track, callback, error)->
 
 get_download_url = (id, callback, error) ->
   
-  client.exists id, (err, found) ->
+  redis_client.exists id, (err, found) ->
     if err or not found
       console.log("Must scrape song page first")
       track_url = "http://hypem.com/track/#{id}"
@@ -55,15 +59,15 @@ get_download_url = (id, callback, error) ->
 
     else
       console.log("We have data in redis for song! No need to scrape")
-      client.hexists id, "download_url", (err, found)->
+      redis_client.hexists id, "download_url", (err, found)->
         if err or not found
           console.log("We've never fetched the download url (or error). Do it now!")
 
-          client.hgetall id, (err, track) ->
+          redis_client.hgetall id, (err, track) ->
             helper_fetch_download_url(track, callback, error)
         else
           console.log("We've seen this song before so just serve the download url quickly!")
-          client.hget id, "download_url" , (err, download_url) ->
+          redis_client.hget id, "download_url" , (err, download_url) ->
             callback(download_url)
 
     
@@ -99,7 +103,7 @@ scrape_helper = (url, callback) ->
 
 
       for track in valid_tracks
-        client.hmset(track.id,
+        redis_client.hmset(track.id,
           "id", track.id 
           "key", track.key,
           "artist", track.artist,
@@ -113,7 +117,7 @@ scrape_helper = (url, callback) ->
 
       caching_json = JSON.stringify(caching)
 
-      client.set url, caching_json, (err, res) ->
+      redis_client.set url, caching_json, (err, res) ->
         callback(valid_tracks)
 
     else
@@ -122,14 +126,14 @@ scrape_helper = (url, callback) ->
 
 scrape = (url = "http://www.hypem.com/popular", callback ) ->
 
-  client.exists url, (err, found) ->
+  redis_client.exists url, (err, found) ->
     if err or not found
       #We've not seen this URL ever before so just perform normal scraping!
       console.log("We've never seen #{url} before. New scrape!")
       scrape_helper(url, callback)
     else
       #We've seen this URL before so lets grab it and check timestamp!
-      client.get url, (err, url_map_json ) ->
+      redis_client.get url, (err, url_map_json ) ->
 
         url_map = JSON.parse(url_map_json)
 
@@ -148,7 +152,7 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           console.log("Our copy of #{url} is old. New scrape!")
           scrape_helper(url, callback)
 
-
+module.exports.set_DB_clients = set_DB_clients
 module.exports.scrape  = scrape
 module.exports.search  = search
 module.exports.get_download_url = get_download_url

@@ -12,6 +12,8 @@ SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
 HOUR = 60 * MINUTES
 
+REFRESH_INTERVAL = 5 * MINUTES;
+
 helper_fetch_download_url = (track, callback, error)->
   id = track.id
   key = track.key
@@ -70,8 +72,7 @@ search = (query, callback) ->
   search_url = "http://hypem.com/search/#{query}"
   scrape(search_url, callback)
 
-scrape = (url = "http://www.hypem.com/popular", callback ) ->
-  
+scrape_helper = (url, callback) ->
   data = 
     'ax' : 1
     'ts' : new Date().getTime
@@ -106,10 +107,46 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           "cookie", track.cookie
         )
 
-      callback(valid_tracks)
+      caching = 
+        timestamp : new Date().getTime()
+        tracks : valid_tracks
+
+      caching_json = JSON.stringify(caching)
+
+      client.set url, caching_json, (err, res) ->
+        callback(valid_tracks)
+
     else
       console.error "Error trying to perform the request to hypem.com"
       callback([])
+
+scrape = (url = "http://www.hypem.com/popular", callback ) ->
+
+  client.exists url, (err, found) ->
+    if err or not found
+      #We've not seen this URL ever before so just perform normal scraping!
+      console.log("We've never seen #{url} before. New scrape!")
+      scrape_helper(url, callback)
+    else
+      #We've seen this URL before so lets grab it and check timestamp!
+      client.get url, (err, url_map_json ) ->
+
+        url_map = JSON.parse(url_map_json)
+
+        timestamp = url_map.timestamp;
+        current_time = new Date().getTime()
+        time_diff = current_time - timestamp
+
+        tracks = url_map.tracks
+
+        if time_diff < ( 5 * MINUTES )
+          #It's been less than the refresh rate. Return the songs!
+          console.log("We have a pretty recent copy of #{url}. So return that!")
+          callback(tracks)
+        else
+          #It's been too long. Let's rescrape!
+          console.log("Our copy of #{url} is old. New scrape!")
+          scrape_helper(url, callback)
 
 
 module.exports.scrape  = scrape

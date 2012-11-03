@@ -1,32 +1,18 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
-require('coffee-script');
 client = redis.createClient()
 
-#client.on "error", (error) ->
-#  console.log("Redis Scraper Error: #{error}" )
+client.on "error", (error) ->
+  console.log("Redis Scraper Error: #{error}" )
 
-POPULAR = "http://www.hypem.com/popular"
-LATEST = "http://hypem.com/latest/"
 
 MILISECONDS = 1
 SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
 HOUR = 60 * MINUTES
 
-start = () ->
-  unless intervalId? 
-    scrape POPULAR, (tracks) ->
-      console.log("popular scrape complete")
-    scrape LATEST, (tracks) ->
-      console.log("latest scrape complete") 
-    intervalId = setInterval scrape, 2 * MINUTES 
-
-stop = () ->
-  if intervalId?
-    clearInterval(intervalId)
-    intervalId = null
+REFRESH_INTERVAL = 5 * MINUTES;
 
 helper_fetch_download_url = (track, callback, error)->
   id = track.id
@@ -86,7 +72,7 @@ search = (query, callback) ->
   search_url = "http://hypem.com/search/#{query}"
   scrape(search_url, callback)
 
-scrape = (url = POPULAR, callback ) ->
+scrape_helper = (url, callback) ->
   data = 
     'ax' : 1
     'ts' : new Date().getTime
@@ -120,50 +106,49 @@ scrape = (url = POPULAR, callback ) ->
           "title", track.title,
           "cookie", track.cookie
         )
-        #caching code to store tracks 
-        if url == POPULAR
-          client.sadd("popular",track.id)
-        if url == LATEST
-          client.sadd("latest",track.id)
-      client.expire("popular",120) #expires entries every two min
-      client.expire("popular",120) #expires entries every two min
-      callback(valid_tracks)
+
+      caching = 
+        timestamp : new Date().getTime()
+        tracks : valid_tracks
+
+      caching_json = JSON.stringify(caching)
+
+      client.set url, caching_json, (err, res) ->
+        callback(valid_tracks)
+
     else
       console.error "Error trying to perform the request to hypem.com"
       callback([])
 
-# popular = (callback) ->
-#   track_list = []
-#   createClient.smembers "popular" (err,track_ids) ->
-#     if err
-#       return []
-#     else 
-#       for id in track_ids
-#         client.hgetall id, (err,track_data)->  
-#           if err
-#             continue
-#           else
-#             track_list.push(track_data)
-#       callback(track_list)
+scrape = (url = "http://www.hypem.com/popular", callback ) ->
+
+  client.exists url, (err, found) ->
+    if err or not found
+      #We've not seen this URL ever before so just perform normal scraping!
+      console.log("We've never seen #{url} before. New scrape!")
+      scrape_helper(url, callback)
+    else
+      #We've seen this URL before so lets grab it and check timestamp!
+      client.get url, (err, url_map_json ) ->
+
+        url_map = JSON.parse(url_map_json)
+
+        timestamp = url_map.timestamp;
+        current_time = new Date().getTime()
+        time_diff = current_time - timestamp
+
+        tracks = url_map.tracks
+
+        if time_diff < ( 5 * MINUTES )
+          #It's been less than the refresh rate. Return the songs!
+          console.log("We have a pretty recent copy of #{url}. So return that!")
+          callback(tracks)
+        else
+          #It's been too long. Let's rescrape!
+          console.log("Our copy of #{url} is old. New scrape!")
+          scrape_helper(url, callback)
 
 
-# latest = (callback) ->
-#   track_list = []
-#   createClient.smembers "latest" (err,track_ids) ->
-#     if err
-#       return []
-#     else 
-#       for id in track_ids
-#         client.hgetall id, (err,track_data)->  
-#           if err
-#             continue
-#           else
-#             track_list.push(track_data)
-#       callback(track_list)
-
-# module.exports.latest  = latest
-# module.exports.popular = popular
-module.exports.start   = start
 module.exports.scrape  = scrape
 module.exports.search  = search
 module.exports.get_download_url = get_download_url

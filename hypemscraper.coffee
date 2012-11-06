@@ -110,14 +110,10 @@ scrape_helper = (url, callback) ->
           "title", track.title,
           "cookie", track.cookie
         )
-
-      caching = 
-        timestamp : new Date().getTime()
-        tracks : valid_tracks
-
-      caching_json = JSON.stringify(caching)
+      caching_json = JSON.stringify(valid_tracks)
 
       redis_client.set url, caching_json, (err, res) ->
+        redis_client.expire url, (5* MINUTES)
         callback(valid_tracks)
 
     else
@@ -129,28 +125,16 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
   redis_client.exists url, (err, found) ->
     if err or not found
       #We've not seen this URL ever before so just perform normal scraping!
-      console.log("We've never seen #{url} before. New scrape!")
+      console.log("We've never seen #{url} before, or it expired. New scrape!")
       scrape_helper(url, callback)
     else
-      #We've seen this URL before so lets grab it and check timestamp!
       redis_client.get url, (err, url_map_json ) ->
 
         url_map = JSON.parse(url_map_json)
 
-        timestamp = url_map.timestamp;
-        current_time = new Date().getTime()
-        time_diff = current_time - timestamp
-
-        tracks = url_map.tracks
-
-        if time_diff < ( 5 * MINUTES )
-          #It's been less than the refresh rate. Return the songs!
-          console.log("We have a pretty recent copy of #{url}. So return that!")
-          callback(tracks)
-        else
-          #It's been too long. Let's rescrape!
-          console.log("Our copy of #{url} is old. New scrape!")
-          scrape_helper(url, callback)
+        tracks = url_map
+        console.log("We have a pretty recent copy of #{url}. So return that!")
+        callback(tracks)
 
 module.exports.set_DB_clients = set_DB_clients
 module.exports.scrape  = scrape

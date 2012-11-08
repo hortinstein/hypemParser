@@ -4,7 +4,7 @@ redis = require("redis")
 
 redis_client = ""
 
-set_DB_clients = (config) ->
+setup = (config) ->
   if config == undefined
     redis_client = redis.createClient()
   else
@@ -39,7 +39,7 @@ helper_fetch_download_url = (track, callback, error)->
     unless error? and response.statusCode is 200
       redis_client.hmset(track.id, "download_url", data.url)
       #At this point we should add the track to the DB
-      callback(data.url)
+      callback(track,data.url)
     else
       error("Error during request")
 
@@ -67,8 +67,8 @@ get_download_url = (id, callback, error) ->
             helper_fetch_download_url(track, callback, error)
         else
           console.log("We've seen this song before so just serve the download url quickly!")
-          redis_client.hget id, "download_url" , (err, download_url) ->
-            callback(download_url)
+          redis_client.hgetall id, (err, track) ->
+            callback(track, track.download_url )
 
     
 search = (query, callback) ->
@@ -152,7 +152,7 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           console.log("Our copy of #{url} is old. New scrape!")
           scrape_helper(url, callback)
 
-module.exports.set_DB_clients = set_DB_clients
+module.exports.setup = setup
 module.exports.scrape  = scrape
 module.exports.search  = search
 module.exports.get_download_url = get_download_url

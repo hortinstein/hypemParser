@@ -1,7 +1,7 @@
 var redis = require('redis');
 
 function redisInit(config){
-	var redisClient = redis.createClient(config.redis_port,config.redis_host); // creates the client to save the submissions to the database
+	var redisClient = redis.createClient(config.port,config.host); // creates the client to save the submissions to the database
 	var dbAuth = function(){ 
 	  redisClient.auth(config.redis_pass, function() {
 	    //console.log("Connected!");
@@ -15,7 +15,7 @@ function redisInit(config){
 	});
 	redisClient.on('error', function (err) { 
 	  console.log("RedisClient: Error:" + err);
-	  redisClient = redis.createClient(config.redis_port,config.redis_host);
+	  redisClient = redis.createClient(config.port,config.host);
 	  dbAuth();
 	});
 	dbAuth();

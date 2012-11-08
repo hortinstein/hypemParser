@@ -1,6 +1,7 @@
 request = require("request")
 cheerio = require("cheerio")
 redis = require("redis")
+moment = require('moment')
 
 redis_client = ""
 
@@ -100,6 +101,8 @@ scrape_helper = (url, callback) ->
         continue if track.type is false
         track["title"] = track.song #pretty renaming
         track["cookie"] = cookie
+        track["humanize_time"] = moment.humanizeDuration(SECONDS * track.time)
+
         valid_tracks.push(track)
 
 
@@ -109,7 +112,10 @@ scrape_helper = (url, callback) ->
           "key", track.key,
           "artist", track.artist,
           "title", track.title,
-          "cookie", track.cookie
+          "time", track.time,
+          "posturl", track.posturl,
+          "cookie", track.cookie,
+          "humanize_time", track.humanize_time
         )
 
       caching = 

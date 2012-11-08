@@ -11,6 +11,7 @@ setup = (config) ->
     redis_client = require("./setupRedis.js")(config)
 
 
+
 MILISECONDS = 1
 SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
@@ -152,7 +153,15 @@ scrape = (url = "http://www.hypem.com/popular", callback ) ->
           console.log("Our copy of #{url} is old. New scrape!")
           scrape_helper(url, callback)
 
+
+song_downloaded = (song_id) ->
+  #Increase that songs download count by 1
+  redis_client.hincrby song_id, "downloads", 1
+
+
+module.exports.cache_client = redis_client
 module.exports.setup = setup
 module.exports.scrape  = scrape
 module.exports.search  = search
 module.exports.get_download_url = get_download_url
+module.exports.song_downloaded = song_downloaded

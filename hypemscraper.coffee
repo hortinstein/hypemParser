@@ -18,7 +18,7 @@ SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
 HOUR = 60 * MINUTES
 
-REFRESH_INTERVAL = 5 * MINUTES;
+REFRESH_INTERVAL = 10 * MINUTES;
 
 helper_fetch_download_url = (track, callback, error)->
   id = track.id
@@ -120,7 +120,7 @@ scrape_helper = (url, callback) ->
       caching_json = JSON.stringify(valid_tracks)
 
       redis_client.set url, caching_json, (err, res) ->
-        redis_client.expire url, (5* MINUTES)
+        redis_client.pexpire url, (REFRESH_INTERVAL)
         callback(valid_tracks)
 
     else

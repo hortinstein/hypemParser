@@ -18,7 +18,8 @@ SECONDS = 1000 * MILISECONDS
 MINUTES = 60 * SECONDS
 HOUR = 60 * MINUTES
 
-REFRESH_INTERVAL = 10 * MINUTES;
+URL_REFRESH_INTERVAL = 10 * MINUTES;
+SONG_REFRESH_INTERVAL = 1 * HOUR;
 
 helper_fetch_download_url = (track, callback, error)->
   id = track.id
@@ -96,10 +97,10 @@ scrape_helper = (url, callback) ->
       page_data = JSON.parse $('#displayList-data').html()      
       valid_tracks = []
 
-      if page_data?
+      unless page_data? #check for null
         console.error "Hypem.com did not return any displayList-data object!"
         callback([])
-        
+
       tracks = page_data.tracks
 
       for track in tracks
@@ -122,10 +123,12 @@ scrape_helper = (url, callback) ->
           "cookie", track.cookie,
           "humanize_time", track.humanize_time
         )
+        redis_client.pexpire track.id, SONG_REFRESH_INTERVAL
+
       caching_json = JSON.stringify(valid_tracks)
 
       redis_client.set url, caching_json, (err, res) ->
-        redis_client.pexpire url, (REFRESH_INTERVAL)
+        redis_client.pexpire url, (URL_REFRESH_INTERVAL)
         callback(valid_tracks)
 
     else

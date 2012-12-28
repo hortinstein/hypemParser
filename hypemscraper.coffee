@@ -93,10 +93,15 @@ scrape_helper = (url, callback) ->
     unless error? and response.statusCode is 200
       cookie = response.headers['set-cookie']
       $ = cheerio.load body
-      page_data = JSON.parse $('#displayList-data').html()
+      page_data = JSON.parse $('#displayList-data').html()      
+      valid_tracks = []
+
+      if page_data?
+        console.error "Hypem.com did not return any displayList-data object!"
+        callback([])
+        
       tracks = page_data.tracks
 
-      valid_tracks = []
       for track in tracks
         continue if track.type is false
         track["title"] = track.song #pretty renaming

@@ -91,49 +91,56 @@ scrape_helper = (url, callback) ->
     jar: false
 
   request options , (error, response, body) ->
-    unless error? and response.statusCode is 200
-      cookie = response.headers['set-cookie']
-      $ = cheerio.load body
-      page_data = JSON.parse $('#displayList-data').html()      
-      valid_tracks = []
-
-      unless page_data? #check for null
-        console.error "Hypem.com did not return any displayList-data object!"
-        callback([])
-
-      tracks = page_data.tracks
-
-      for track in tracks
-        continue if track.type is false
-        track["title"] = track.song #pretty renaming
-        track["cookie"] = cookie
-        track["humanize_time"] = moment.humanizeDuration(SECONDS * track.time)
-
-        valid_tracks.push(track)
-
-
-      for track in valid_tracks
-        redis_client.hmset(track.id,
-          "id", track.id 
-          "key", track.key,
-          "artist", track.artist,
-          "title", track.title,
-          "time", track.time,
-          "posturl", track.posturl,
-          "cookie", track.cookie,
-          "humanize_time", track.humanize_time
-        )
-        redis_client.pexpire track.id, SONG_REFRESH_INTERVAL
-
-      caching_json = JSON.stringify(valid_tracks)
-
-      redis_client.set url, caching_json, (err, res) ->
-        redis_client.pexpire url, (URL_REFRESH_INTERVAL)
-        callback(valid_tracks)
-
-    else
+    if error?
       console.error "Error trying to perform the request to hypem.com"
+      console.error error
       callback([])
+      return
+
+    unless response.statusCode is 200
+      console.error "Non 200 status code when asking hypem.com for request. StatusCode - #{response.statusCode}"
+      callback([])
+      return 
+
+    cookie = response.headers['set-cookie']
+    $ = cheerio.load body
+    page_data = JSON.parse $('#displayList-data').html()      
+    valid_tracks = []
+
+    unless page_data? #check for null
+      console.error "Hypem.com did not return any displayList-data object!"
+      callback([])
+      return
+
+    tracks = page_data.tracks
+
+    for track in tracks
+      continue if track.type is false
+      track["title"] = track.song #pretty renaming
+      track["cookie"] = cookie
+      track["humanize_time"] = moment.humanizeDuration(SECONDS * track.time)
+
+      valid_tracks.push(track)
+
+
+    for track in valid_tracks
+      redis_client.hmset(track.id,
+        "id", track.id 
+        "key", track.key,
+        "artist", track.artist,
+        "title", track.title,
+        "time", track.time,
+        "posturl", track.posturl,
+        "cookie", track.cookie,
+        "humanize_time", track.humanize_time
+      )
+      redis_client.pexpire track.id, SONG_REFRESH_INTERVAL
+
+    caching_json = JSON.stringify(valid_tracks)
+
+    redis_client.set url, caching_json, (err, res) ->
+      redis_client.pexpire url, (URL_REFRESH_INTERVAL)
+      callback(valid_tracks)
 
 scrape = (url = "http://www.hypem.com/popular", callback ) ->
 
